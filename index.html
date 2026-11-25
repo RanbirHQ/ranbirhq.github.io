@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RanbirHQ - Notes, Tools, PDF & MP3</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f6f9; color: #333; line-height: 1.6; }
+        header { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; text-align: center; padding: 25px 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        header h1 { font-size: 26px; margin-bottom: 5px; }
+        header p { font-size: 14px; opacity: 0.9; }
+        .tabs { display: flex; justify-content: center; background: white; padding: 10px; gap: 8px; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+        .tab-btn { padding: 10px 16px; border: none; background: #e9ecef; color: #333; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: #2a5298; color: white; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: white; padding: 18px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #2a5298; }
+        .card h3 { font-size: 18px; color: #1e3c72; margin-bottom: 8px; }
+        .card p { font-size: 15px; color: #444; white-space: pre-wrap; }
+        .btn { display: inline-block; margin-top: 10px; padding: 8px 16px; background: #2a5298; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; }
+        .btn:hover { background: #1e3c72; }
+        audio { width: 100%; margin-top: 10px; border-radius: 8px; }
+        .empty-msg { text-align: center; color: #777; padding: 30px; background: white; border-radius: 12px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>RanbirHQ</h1>
+    <p>डेली नोट्स • लाइव HTML टूल्स • PDF • MP3</p>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="showTab('notes', this)">📝 डेली नोट्स</button>
+    <button class="tab-btn" onclick="showTab('html', this)">⚡ लाइव टूल्स (HTML)</button>
+    <button class="tab-btn" onclick="showTab('pdf', this)">📄 PDF फ़ाइलें</button>
+    <button class="tab-btn" onclick="showTab('mp3', this)">🎵 MP3 गाने</button>
+</div>
+
+<div class="container">
+    <div id="notes" class="section active"><div class="empty-msg">नोट्स लोड हो रहे हैं...</div></div>
+    <div id="html" class="section"><div class="empty-msg">HTML टूल्स लोड हो रहे हैं...</div></div>
+    <div id="pdf" class="section"><div class="empty-msg">PDF फ़ाइलें लोड हो रही हैं...</div></div>
+    <div id="mp3" class="section"><div class="empty-msg">MP3 फ़ाइलें लोड हो रही हैं...</div></div>
+</div>
+
+<script>
+    const USERNAME = 'RanbirHQ';
+    const REPO = 'ranbirhq.github.io';
+    const FOLDER = 'files';
+
+    function showTab(tabId, btn) {
+        document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    function formatTitle(filename) {
+        return filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    }
+
+    async function loadContent() {
+        const notesContainer = document.getElementById('notes');
+        const htmlContainer = document.getElementById('html');
+        const pdfContainer = document.getElementById('pdf');
+        const mp3Container = document.getElementById('mp3');
+
+        let notesHTML = '';
+        let htmlTools = '';
+        let pdfFiles = '';
+        let mp3Files = '';
+
+        // 1. Load files from 'files' folder
+        try {
+            const res = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER}`);
+            if (res.ok) {
+                const items = await res.json();
+                for (const item of items) {
+                    if (item.type !== 'file') continue;
+                    const name = item.name;
+                    const lower = name.toLowerCase();
+                    const title = formatTitle(name);
+                    const fileUrl = `${FOLDER}/${encodeURIComponent(name)}`;
+
+                    if (lower.endsWith('.txt') && lower !== 'readme.txt') {
+                        const txtRes = await fetch(fileUrl);
+                        const txtContent = await txtRes.text();
+                        notesHTML += `
+                            <div class="card">
+                                <h3>${title}</h3>
+                                <p>${txtContent}</p>
+                            </div>`;
+                    } else if (lower.endsWith('.html')) {
+                        htmlTools += `
+                            <div class="card">
+                                <h3>${title}</h3>
+                                <a href="${fileUrl}" target="_blank" class="btn">लाइव खोलें (Open) ↗</a>
+                            </div>`;
+                    } else if (lower.endsWith('.pdf')) {
+                        pdfFiles += `
+                            <div class="card">
+                                <h3>${title}</h3>
+                                <a href="${fileUrl}" target="_blank" class="btn">PDF खोलें / डाउनलोड करें 📥</a>
+                            </div>`;
+                    } else if (lower.endsWith('.mp3')) {
+                        mp3Files += `
+                            <div class="card">
+                                <h3>${title}</h3>
+                                <audio controls src="${fileUrl}"></audio>
+                            </div>`;
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+
+        // 2. Also keep old notes from notes.json if present
+        try {
+            const jsonRes = await fetch('notes.json');
+            if (jsonRes.ok) {
+                const oldNotes = await jsonRes.json();
+                oldNotes.forEach(n => {
+                    notesHTML += `
+                        <div class="card">
+                            <h3>${n.title || ''}</h3>
+                            <p>${n.text || ''}</p>
+                        </div>`;
+                });
+            }
+        } catch (e) { console.error(e); }
+
+        notesContainer.innerHTML = notesHTML || '<div class="empty-msg">अभी कोई नोट उपलब्ध नहीं है।</div>';
+        htmlContainer.innerHTML = htmlTools || '<div class="empty-msg">अभी कोई HTML टूल उपलब्ध नहीं है।</div>';
+        pdfContainer.innerHTML = pdfFiles || '<div class="empty-msg">अभी कोई PDF फ़ाइल उपलब्ध नहीं है।</div>';
+        mp3Container.innerHTML = mp3Files || '<div class="empty-msg">अभी कोई MP3 फ़ाइल उपलब्ध नहीं है।</div>';
+    }
+
+    loadContent();
+</script>
+
+</body>
+</html>
